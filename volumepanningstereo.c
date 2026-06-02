@@ -1,11 +1,6 @@
-#define _USE_MATH_DEFINES
 #include <math.h>
 #include <stdlib.h>
 #include <stdint.h>
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
 
 #include "lv2/core/lv2.h"
 
@@ -90,13 +85,13 @@ static void run(LV2_Handle instance, uint32_t n_samples)
         return;
     }
 
-    /* Constant-power (equal-power) panning applied as stereo balance.
-       pan=-1 → full left, pan=0 → centre, pan=+1 → full right.
-       angle sweeps 0..π/2 so cos²+sin²=1 (total power preserved). */
-    const float angle = (*self->pan + 1.0f) * (float)(M_PI / 4.0);
-    const float vol   = powf(10.0f, *self->volume / 20.0f);
-    const float gl    = vol * cosf(angle);
-    const float gr    = vol * sinf(angle);
+    /* Stereo balance control: pan=-1 → full left, pan=0 → centre (unity on
+       both channels), pan=+1 → full right.  The dominant side stays at unity
+       gain; the opposing side attenuates linearly to zero. */
+    const float pan = *self->pan;
+    const float vol = powf(10.0f, *self->volume / 20.0f);
+    const float gl  = vol * (pan <= 0.0f ? 1.0f : 1.0f - pan);
+    const float gr  = vol * (pan >= 0.0f ? 1.0f : 1.0f + pan);
 
     for (uint32_t i = 0; i < n_samples; ++i) {
         out_l[i] = in_l[i] * gl;

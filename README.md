@@ -14,7 +14,7 @@ An LV2 plugin that processes a stereo input to a stereo output with volume, pan,
 | Mute Invert | 0 / 1 | 0 | Inverts the sense of Mute — when on, the plugin is silent while Mute is off and passes audio while Mute is on |
 | Enabled | 0 / 1 | 1 | Bypass — when off, input is passed through to both channels unchanged |
 
-Panning uses a constant-power (equal-power) law so perceived loudness stays consistent across the stereo field. The plugin declares `lv2:hardRTCapable` — it is real-time safe and performs no allocation in the audio thread.
+**Pan** acts as a stereo balance control, matching the behaviour of a stereo amplifier's balance knob. At centre (0.0) both channels pass through at unity gain. Moving left attenuates the right channel while leaving the left channel unchanged; moving right does the opposite. The plugin declares `lv2:hardRTCapable` — it is real-time safe and performs no allocation in the audio thread.
 
 ## Requirements
 

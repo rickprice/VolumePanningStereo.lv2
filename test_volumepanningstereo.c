@@ -1,13 +1,8 @@
-#define _USE_MATH_DEFINES
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
 
 #include "lv2/core/lv2.h"
 
@@ -160,28 +155,23 @@ static void test_center_pan_equal_gain(void)
     f->pan = 0.0f;
     fx_run(f);
 
-    float expected = cosf((float)(M_PI / 4.0));  /* √2/2 ≈ 0.7071 at 0 dB */
-    CHECK_NEAR(f->out_l[0], expected, EPSILON,
-               "centre pan 0 dB: left = cos(π/4)");
-    CHECK_NEAR(f->out_r[0], expected, EPSILON,
-               "centre pan 0 dB: right = sin(π/4)");
-    CHECK_NEAR(f->out_l[0], f->out_r[0], EPSILON,
-               "centre pan: L and R are equal");
+    CHECK_NEAR(f->out_l[0], 1.0f, EPSILON, "centre pan 0 dB: left = 1.0");
+    CHECK_NEAR(f->out_r[0], 1.0f, EPSILON, "centre pan 0 dB: right = 1.0");
+    CHECK_NEAR(f->out_l[0], f->out_r[0], EPSILON, "centre pan: L and R are equal");
 
     fx_destroy(f);
 }
 
-static void test_center_pan_power_preserved(void)
+static void test_center_pan_unity_gain(void)
 {
-    printf("test_center_pan_power_preserved\n");
+    printf("test_center_pan_unity_gain\n");
     Fixture* f = fx_create();
     f->pan    = 0.0f;
     f->volume = 0.0f;   /* 0 dB = unity gain */
     fx_run(f);
 
-    float power = f->out_l[0]*f->out_l[0] + f->out_r[0]*f->out_r[0];
-    CHECK_NEAR(power, 1.0f, EPSILON,
-               "centre pan 0 dB: gl²+gr² = 1 (power preserved per channel)");
+    CHECK_NEAR(f->out_l[0], 1.0f, EPSILON, "centre pan 0 dB: left = 1.0 (unity)");
+    CHECK_NEAR(f->out_r[0], 1.0f, EPSILON, "centre pan 0 dB: right = 1.0 (unity)");
 
     fx_destroy(f);
 }
@@ -212,9 +202,9 @@ static void test_full_right_pan(void)
     fx_destroy(f);
 }
 
-static void test_constant_power_law(void)
+static void test_balance_dominant_channel(void)
 {
-    printf("test_constant_power_law\n");
+    printf("test_balance_dominant_channel\n");
     static const float pans[] = { -1.0f, -0.75f, -0.5f, -0.25f, 0.0f,
                                     0.25f,  0.5f,  0.75f,  1.0f };
     Fixture* f = fx_create();
@@ -223,9 +213,10 @@ static void test_constant_power_law(void)
     for (int i = 0; i < (int)(sizeof(pans)/sizeof(*pans)); ++i) {
         f->pan = pans[i];
         fx_run(f);
-        float power = f->out_l[0]*f->out_l[0] + f->out_r[0]*f->out_r[0];
-        CHECK_NEAR(power, 1.0f, EPSILON,
-                   "constant-power law: gl²+gr² = 1 at all pan positions");
+        /* dominant side (left when pan<=0, right when pan>=0) stays at 1.0 */
+        float dominant = (pans[i] <= 0.0f) ? f->out_l[0] : f->out_r[0];
+        CHECK_NEAR(dominant, 1.0f, EPSILON,
+                   "balance: dominant channel stays at unity at all pan positions");
     }
 
     fx_destroy(f);
@@ -309,17 +300,14 @@ static void test_volume_6dB_doubles(void)
 static void test_volume_unity_centre_pan(void)
 {
     printf("test_volume_unity_centre_pan\n");
-    /* 0 dB at centre pan: each channel = cos(π/4) ≈ 0.7071 */
+    /* 0 dB at centre pan: each channel = 1.0 (unity gain) */
     Fixture* f = fx_create();
     f->pan    = 0.0f;
     f->volume = 0.0f;
     fx_run(f);
 
-    float expected = cosf((float)(M_PI / 4.0));
-    CHECK_NEAR(f->out_l[0], expected, EPSILON,
-               "0 dB centre pan: left = cos(π/4)");
-    CHECK_NEAR(f->out_r[0], expected, EPSILON,
-               "0 dB centre pan: right = sin(π/4)");
+    CHECK_NEAR(f->out_l[0], 1.0f, EPSILON, "0 dB centre pan: left = 1.0");
+    CHECK_NEAR(f->out_r[0], 1.0f, EPSILON, "0 dB centre pan: right = 1.0");
 
     fx_destroy(f);
 }
@@ -386,9 +374,8 @@ static void test_unmute_restores_signal(void)
     f->mute = 0.0f;
     fx_run(f);
 
-    float expected = cosf((float)(M_PI / 4.0));
-    CHECK_NEAR(f->out_l[0], expected, EPSILON, "unmute restores left signal");
-    CHECK_NEAR(f->out_r[0], expected, EPSILON, "unmute restores right signal");
+    CHECK_NEAR(f->out_l[0], 1.0f, EPSILON, "unmute restores left signal");
+    CHECK_NEAR(f->out_r[0], 1.0f, EPSILON, "unmute restores right signal");
 
     fx_destroy(f);
 }
@@ -418,11 +405,8 @@ static void test_mute_invert_cancels_mute(void)
     f->mute_invert  = 1.0f;
     fx_run(f);
 
-    float expected = cosf((float)(M_PI / 4.0));
-    CHECK_NEAR(f->out_l[0], expected, EPSILON,
-               "mute_invert cancels mute: left signal passes");
-    CHECK_NEAR(f->out_r[0], expected, EPSILON,
-               "mute_invert cancels mute: right signal passes");
+    CHECK_NEAR(f->out_l[0], 1.0f, EPSILON, "mute_invert cancels mute: left signal passes");
+    CHECK_NEAR(f->out_r[0], 1.0f, EPSILON, "mute_invert cancels mute: right signal passes");
 
     fx_destroy(f);
 }
@@ -434,11 +418,8 @@ static void test_mute_invert_off_no_effect(void)
     Fixture* f = fx_create();
     fx_run(f);
 
-    float expected = cosf((float)(M_PI / 4.0));
-    CHECK_NEAR(f->out_l[0], expected, EPSILON,
-               "mute_invert=0: left signal unaffected");
-    CHECK_NEAR(f->out_r[0], expected, EPSILON,
-               "mute_invert=0: right signal unaffected");
+    CHECK_NEAR(f->out_l[0], 1.0f, EPSILON, "mute_invert=0: left signal unaffected");
+    CHECK_NEAR(f->out_r[0], 1.0f, EPSILON, "mute_invert=0: right signal unaffected");
 
     fx_destroy(f);
 }
@@ -549,9 +530,8 @@ static void test_negative_input_sign_preserved(void)
     f->volume = 0.0f;   /* 0 dB = unity gain */
     fx_run(f);
 
-    float expected = -cosf((float)(M_PI / 4.0));
-    CHECK_NEAR(f->out_l[0], expected, EPSILON, "negative input: left sign preserved");
-    CHECK_NEAR(f->out_r[0], expected, EPSILON, "negative input: right sign preserved");
+    CHECK_NEAR(f->out_l[0], -1.0f, EPSILON, "negative input: left sign preserved");
+    CHECK_NEAR(f->out_r[0], -1.0f, EPSILON, "negative input: right sign preserved");
 
     fx_destroy(f);
 }
@@ -563,10 +543,10 @@ static void test_all_samples_receive_same_gain(void)
     f->pan    = 0.25f;
     f->volume = -3.0f;  /* -3 dB */
 
-    float angle      = (f->pan + 1.0f) * (float)(M_PI / 4.0);
+    float pan        = f->pan;
     float gain       = powf(10.0f, f->volume / 20.0f);
-    float expected_l = gain * cosf(angle);
-    float expected_r = gain * sinf(angle);
+    float expected_l = gain * (pan <= 0.0f ? 1.0f : 1.0f - pan);
+    float expected_r = gain * (pan >= 0.0f ? 1.0f : 1.0f + pan);
 
     fx_run(f);
 
@@ -596,10 +576,10 @@ static void test_output_gain_formula(void)
         f->volume = cases[i].vol_db;
         fx_run(f);
 
-        float angle = (cases[i].pan + 1.0f) * (float)(M_PI / 4.0);
-        float gain  = powf(10.0f, cases[i].vol_db / 20.0f);
-        float el    = gain * cosf(angle);
-        float er    = gain * sinf(angle);
+        float pan  = cases[i].pan;
+        float gain = powf(10.0f, cases[i].vol_db / 20.0f);
+        float el   = gain * (pan <= 0.0f ? 1.0f : 1.0f - pan);
+        float er   = gain * (pan >= 0.0f ? 1.0f : 1.0f + pan);
 
         CHECK_NEAR(f->out_l[0], el, EPSILON, "output matches gain formula (left)");
         CHECK_NEAR(f->out_r[0], er, EPSILON, "output matches gain formula (right)");
@@ -618,10 +598,10 @@ int main(void)
     test_instantiate_cleanup();
     test_activate_deactivate_cycle();
     test_center_pan_equal_gain();
-    test_center_pan_power_preserved();
+    test_center_pan_unity_gain();
     test_full_left_pan();
     test_full_right_pan();
-    test_constant_power_law();
+    test_balance_dominant_channel();
     test_pan_monotonic();
     test_volume_min();
     test_volume_max();
