@@ -1,0 +1,4 @@
+# Built artifacts
+*.so
+*.o
+test_*
