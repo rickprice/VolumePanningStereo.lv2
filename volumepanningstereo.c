@@ -27,16 +27,17 @@ typedef enum {
     PORT_MUTE_INVERT = 8,
 } PortIndex;
 
+/* Fields must stay in PortIndex order (0–8) — do not reorder. */
 typedef struct {
-    const float* in_l;
-    const float* in_r;
-    float*       out_l;
-    float*       out_r;
-    const float* pan;
-    const float* volume;
-    const float* mute;
-    const float* enabled;
-    const float* mute_invert;
+    const float* in_l;        /* 0 PORT_IN_L        */
+    const float* in_r;        /* 1 PORT_IN_R        */
+    float*       out_l;       /* 2 PORT_OUT_L       */
+    float*       out_r;       /* 3 PORT_OUT_R       */
+    const float* enabled;     /* 4 PORT_ENABLED     */
+    const float* volume;      /* 5 PORT_VOLUME      */
+    const float* pan;         /* 6 PORT_PAN         */
+    const float* mute;        /* 7 PORT_MUTE        */
+    const float* mute_invert; /* 8 PORT_MUTE_INVERT */
 } Plugin;
 
 static LV2_Handle instantiate(
