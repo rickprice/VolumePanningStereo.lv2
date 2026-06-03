@@ -1,8 +1,17 @@
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdint.h>
 
 #include "lv2/core/lv2.h"
+
+#if defined(__AVX__)
+#  include <immintrin.h>
+#elif defined(__SSE__)
+#  include <xmmintrin.h>
+#elif defined(__ARM_NEON)
+#  include <arm_neon.h>
+#endif
 
 #define PLUGIN_URI "http://fprice.pricemail.ca/plugins/volumepanningstereo"
 
@@ -69,19 +78,15 @@ static void run(LV2_Handle instance, uint32_t n_samples)
     /* lv2:enabled — when 0 the host may skip run() entirely, but we handle it
        here too so plugin-level bypass works without host support. */
     if (*self->enabled < 0.5f) {
-        for (uint32_t i = 0; i < n_samples; ++i) {
-            out_l[i] = in_l[i];
-            out_r[i] = in_r[i];
-        }
+        if (out_l != in_l) memcpy(out_l, in_l, n_samples * sizeof(float));
+        if (out_r != in_r) memcpy(out_r, in_r, n_samples * sizeof(float));
         return;
     }
 
     const int muted = (*self->mute >= 0.5f) ^ (*self->mute_invert >= 0.5f);
     if (muted) {
-        for (uint32_t i = 0; i < n_samples; ++i) {
-            out_l[i] = 0.0f;
-            out_r[i] = 0.0f;
-        }
+        memset(out_l, 0, n_samples * sizeof(float));
+        memset(out_r, 0, n_samples * sizeof(float));
         return;
     }
 
@@ -93,7 +98,38 @@ static void run(LV2_Handle instance, uint32_t n_samples)
     const float gl  = vol * (pan <= 0.0f ? 1.0f : 1.0f - pan);
     const float gr  = vol * (pan >= 0.0f ? 1.0f : 1.0f + pan);
 
-    for (uint32_t i = 0; i < n_samples; ++i) {
+    uint32_t i = 0;
+
+#if defined(__AVX__)
+    {
+        const __m256 vgl = _mm256_set1_ps(gl);
+        const __m256 vgr = _mm256_set1_ps(gr);
+        for (; i + 8 <= n_samples; i += 8) {
+            _mm256_storeu_ps(&out_l[i], _mm256_mul_ps(_mm256_loadu_ps(&in_l[i]), vgl));
+            _mm256_storeu_ps(&out_r[i], _mm256_mul_ps(_mm256_loadu_ps(&in_r[i]), vgr));
+        }
+    }
+#elif defined(__SSE__)
+    {
+        const __m128 vgl = _mm_set1_ps(gl);
+        const __m128 vgr = _mm_set1_ps(gr);
+        for (; i + 4 <= n_samples; i += 4) {
+            _mm_storeu_ps(&out_l[i], _mm_mul_ps(_mm_loadu_ps(&in_l[i]), vgl));
+            _mm_storeu_ps(&out_r[i], _mm_mul_ps(_mm_loadu_ps(&in_r[i]), vgr));
+        }
+    }
+#elif defined(__ARM_NEON)
+    {
+        const float32x4_t vgl = vdupq_n_f32(gl);
+        const float32x4_t vgr = vdupq_n_f32(gr);
+        for (; i + 4 <= n_samples; i += 4) {
+            vst1q_f32(&out_l[i], vmulq_f32(vld1q_f32(&in_l[i]), vgl));
+            vst1q_f32(&out_r[i], vmulq_f32(vld1q_f32(&in_r[i]), vgr));
+        }
+    }
+#endif
+
+    for (; i < n_samples; ++i) {
         out_l[i] = in_l[i] * gl;
         out_r[i] = in_r[i] * gr;
     }
