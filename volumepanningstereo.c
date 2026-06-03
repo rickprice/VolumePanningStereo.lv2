@@ -76,14 +76,6 @@ static void run(LV2_Handle instance, uint32_t n_samples)
     float*        out_l = self->out_l;
     float*        out_r = self->out_r;
 
-    /* lv2:enabled — when 0 the host may skip run() entirely, but we handle it
-       here too so plugin-level bypass works without host support. */
-    if (*self->enabled < 0.5f) {
-        if (out_l != in_l) memcpy(out_l, in_l, n_samples * sizeof(float));
-        if (out_r != in_r) memcpy(out_r, in_r, n_samples * sizeof(float));
-        return;
-    }
-
     const int muted = (*self->mute >= 0.5f) ^ (*self->mute_invert >= 0.5f);
     if (muted) {
         memset(out_l, 0, n_samples * sizeof(float));
