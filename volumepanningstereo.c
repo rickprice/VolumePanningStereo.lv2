@@ -17,7 +17,7 @@
 #define PLUGIN_URI "http://fprice.pricemail.ca/plugins/volumepanningstereo"
 
 
-/* Fields must stay in PortIndex order (0–8) — do not reorder. */
+/* Port pointer fields must stay in PortIndex order (0–8) — do not reorder. */
 typedef struct {
     const float* in_l;        /* 0 PORT_IN_L        */
     const float* in_r;        /* 1 PORT_IN_R        */
@@ -28,6 +28,8 @@ typedef struct {
     const float* pan;         /* 6 PORT_PAN         */
     const float* mute;        /* 7 PORT_MUTE        */
     const float* mute_invert; /* 8 PORT_MUTE_INVERT */
+    float        cached_gain;
+    float        last_volume;
 } Plugin;
 
 static LV2_Handle instantiate(
@@ -56,15 +58,20 @@ static void connect_port(LV2_Handle instance, uint32_t port, void* data)
     }
 }
 
-static void activate(LV2_Handle instance) { (void)instance; }
+static void activate(LV2_Handle instance)
+{
+    Plugin* self = (Plugin*)instance;
+    self->last_volume = 1e38f;  /* sentinel: force recompute on first run() */
+    self->cached_gain = 1.0f;
+}
 
 static void run(LV2_Handle instance, uint32_t n_samples)
 {
-    const Plugin* self  = (const Plugin*)instance;
-    const float*  in_l  = self->in_l;
-    const float*  in_r  = self->in_r;
-    float*        out_l = self->out_l;
-    float*        out_r = self->out_r;
+    Plugin*      self  = (Plugin*)instance;
+    const float* in_l  = self->in_l;
+    const float* in_r  = self->in_r;
+    float*       out_l = self->out_l;
+    float*       out_r = self->out_r;
 
     const int muted = (*self->mute >= 0.5f) ^ (*self->mute_invert >= 0.5f);
     if (muted) {
@@ -76,8 +83,13 @@ static void run(LV2_Handle instance, uint32_t n_samples)
     /* Stereo balance control: pan=-1 → full left, pan=0 → centre (unity on
        both channels), pan=+1 → full right.  The dominant side stays at unity
        gain; the opposing side attenuates linearly to zero. */
-    const float pan = *self->pan;
-    const float vol = powf(10.0f, *self->volume / 20.0f);
+    const float pan    = *self->pan;
+    const float vol_db = *self->volume;
+    if (vol_db != self->last_volume) {
+        self->last_volume = vol_db;
+        self->cached_gain = powf(10.0f, vol_db / 20.0f);
+    }
+    const float vol = self->cached_gain;
     const float gl  = vol * (pan <= 0.0f ? 1.0f : 1.0f - pan);
     const float gr  = vol * (pan >= 0.0f ? 1.0f : 1.0f + pan);
 
