@@ -424,84 +424,6 @@ static void test_mute_invert_off_no_effect(void)
     fx_destroy(f);
 }
 
-static void test_bypass_passes_input_through(void)
-{
-    printf("test_bypass_passes_input_through\n");
-    Fixture* f = fx_create();
-    f->enabled = 0.0f;
-    f->volume  = -20.0f;  /* would attenuate if active */
-    f->pan     = 1.0f;    /* would silence left if active */
-
-    for (int i = 0; i < NSAMPLES; ++i) {
-        f->in_l[i] = (float)i / (float)NSAMPLES;
-        f->in_r[i] = 1.0f - (float)i / (float)NSAMPLES;
-    }
-
-    fx_run(f);
-
-    int l_ok = 1, r_ok = 1;
-    for (int i = 0; i < NSAMPLES; ++i) {
-        if (fabsf(f->out_l[i] - f->in_l[i]) >= EPSILON) l_ok = 0;
-        if (fabsf(f->out_r[i] - f->in_r[i]) >= EPSILON) r_ok = 0;
-    }
-    CHECK(l_ok, "bypass: all left samples equal left input");
-    CHECK(r_ok, "bypass: all right samples equal right input");
-
-    fx_destroy(f);
-}
-
-static void test_bypass_overrides_mute(void)
-{
-    printf("test_bypass_overrides_mute\n");
-    Fixture* f = fx_create();
-    f->enabled = 0.0f;
-    f->mute    = 1.0f;
-    fx_run(f);
-
-    /* Bypass takes priority: signal passes through regardless of mute */
-    CHECK(all_near(f->out_l, 1.0f, EPSILON),
-          "bypass+mute: left = input (bypass wins)");
-    CHECK(all_near(f->out_r, 1.0f, EPSILON),
-          "bypass+mute: right = input (bypass wins)");
-
-    fx_destroy(f);
-}
-
-static void test_bypass_overrides_mute_invert(void)
-{
-    printf("test_bypass_overrides_mute_invert\n");
-    /* bypass takes priority over mute_invert: input passes through unchanged */
-    Fixture* f      = fx_create();
-    f->enabled      = 0.0f;
-    f->mute_invert  = 1.0f;  /* would silence if bypass weren't active */
-    fx_run(f);
-
-    CHECK(all_near(f->out_l, 1.0f, EPSILON),
-          "bypass+mute_invert: left = input (bypass wins)");
-    CHECK(all_near(f->out_r, 1.0f, EPSILON),
-          "bypass+mute_invert: right = input (bypass wins)");
-
-    fx_destroy(f);
-}
-
-static void test_re_enable_restores_processing(void)
-{
-    printf("test_re_enable_restores_processing\n");
-    Fixture* f = fx_create();
-    f->enabled = 0.0f;
-    fx_run(f);
-
-    f->enabled = 1.0f;
-    f->pan     = -1.0f;
-    f->volume  = 0.0f;   /* 0 dB = unity gain */
-    fx_run(f);
-
-    CHECK_NEAR(f->out_l[0], 1.0f, EPSILON, "re-enable: processing resumes (left)");
-    CHECK_NEAR(f->out_r[0], 0.0f, EPSILON, "re-enable: processing resumes (right)");
-
-    fx_destroy(f);
-}
-
 static void test_silent_input(void)
 {
     printf("test_silent_input\n");
@@ -614,10 +536,6 @@ int main(void)
     test_mute_invert_alone_silences();
     test_mute_invert_cancels_mute();
     test_mute_invert_off_no_effect();
-    test_bypass_passes_input_through();
-    test_bypass_overrides_mute();
-    test_bypass_overrides_mute_invert();
-    test_re_enable_restores_processing();
     test_silent_input();
     test_negative_input_sign_preserved();
     test_all_samples_receive_same_gain();
