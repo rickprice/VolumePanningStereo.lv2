@@ -28,7 +28,7 @@
     ] ;
 
     lv2:minorVersion 1 ;
-    lv2:microVersion 5 ;
+    lv2:microVersion 6 ;
 
     lv2:optionalFeature lv2:hardRTCapable ;
 
