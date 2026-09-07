@@ -12,7 +12,7 @@ An LV2 plugin that processes a stereo input to a stereo output with volume, pan,
 | Volume | −60.0 to +20.0 dB | 0.0 | Output level — 0 dB is unity gain, negative values attenuate, positive values boost |
 | Mute | 0 / 1 | 0 | Silences output when enabled |
 | Mute Invert | 0 / 1 | 0 | Inverts the sense of Mute — when on, the plugin is silent while Mute is off and passes audio while Mute is on |
-| Enabled | 0 / 1 | 1 | Bypass — when off, input is passed through to both channels unchanged |
+| Enabled | 0 / 1 | 1 | Host-managed bypass toggle — the host uses this to bypass the plugin at the graph level |
 
 **Pan** acts as a stereo balance control, matching the behaviour of a stereo amplifier's balance knob. At centre (0.0) both channels pass through at unity gain. Moving left attenuates the right channel while leaving the left channel unchanged; moving right does the opposite. The plugin declares `lv2:hardRTCapable` — it is real-time safe and performs no allocation in the audio thread.
 
