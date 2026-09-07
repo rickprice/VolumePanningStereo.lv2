@@ -1,18 +1,19 @@
 PLUGIN_NAME = volumepanningstereo
 INSTALL_DIR = $(HOME)/.lv2/$(PLUGIN_NAME).lv2
 
-CC     = gcc
-CFLAGS = $(shell pkg-config --cflags lv2) -std=c99 -fPIC -fvisibility=hidden \
-         -O3 -march=native -ffast-math -Wall -Wextra -Wpedantic
+CC      = gcc
+CFLAGS  = $(shell pkg-config --cflags lv2) -std=c99 \
+          -O3 -march=native -ffast-math -Wall -Wextra -Wpedantic
+SOFLAGS = -fPIC -fvisibility=hidden
 LDFLAGS = -shared -Wl,-soname,$(PLUGIN_NAME).so -lm
 
 all: $(PLUGIN_NAME).so
 
 $(PLUGIN_NAME).so: $(PLUGIN_NAME).c
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) $(SOFLAGS) $(LDFLAGS) -o $@ $<
 
 $(PLUGIN_NAME).o: $(PLUGIN_NAME).c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) $(SOFLAGS) -c -o $@ $<
 
 test_$(PLUGIN_NAME): test_$(PLUGIN_NAME).c $(PLUGIN_NAME).o
 	$(CC) $(CFLAGS) -o $@ $^ -lm
