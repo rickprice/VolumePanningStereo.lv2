@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "lv2/core/lv2.h"
+#include "ports.h"
 
 #if defined(__AVX__)
 #  include <immintrin.h>
@@ -15,17 +16,6 @@
 
 #define PLUGIN_URI "http://fprice.pricemail.ca/plugins/volumepanningstereo"
 
-typedef enum {
-    PORT_IN_L        = 0,
-    PORT_IN_R        = 1,
-    PORT_OUT_L       = 2,
-    PORT_OUT_R       = 3,
-    PORT_ENABLED     = 4,
-    PORT_VOLUME      = 5,
-    PORT_PAN         = 6,
-    PORT_MUTE        = 7,
-    PORT_MUTE_INVERT = 8,
-} PortIndex;
 
 /* Fields must stay in PortIndex order (0–8) — do not reorder. */
 typedef struct {

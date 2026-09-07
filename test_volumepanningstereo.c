@@ -5,20 +5,9 @@
 #include <string.h>
 
 #include "lv2/core/lv2.h"
+#include "ports.h"
 
 extern const LV2_Descriptor* lv2_descriptor(uint32_t index);
-
-enum {
-    PORT_IN_L        = 0,
-    PORT_IN_R        = 1,
-    PORT_OUT_L       = 2,
-    PORT_OUT_R       = 3,
-    PORT_ENABLED     = 4,
-    PORT_VOLUME      = 5,
-    PORT_PAN         = 6,
-    PORT_MUTE        = 7,
-    PORT_MUTE_INVERT = 8,
-};
 
 #define NSAMPLES 64
 #define EPSILON  1e-5f
